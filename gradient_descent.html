@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Gradient Descent</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@300;500;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #0f0f1a;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 24px;
+  }
+
+  .main-container {
+    display: flex;
+    gap: 24px;
+    max-width: 1100px;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .canvas-wrapper {
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid #2a2a4a;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  canvas {
+    display: block;
+    border-radius: 8px;
+  }
+
+  .controls {
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid #2a2a4a;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .control-group label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .value-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: #00d4ff;
+    line-height: 1;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, #00d4ff, #ff6b6b);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    background: #fff;
+    border-radius: 50%;
+    cursor: grab;
+    box-shadow: 0 2px 8px rgba(0,212,255,0.4);
+    transition: transform 0.15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.2);
+  }
+
+  .info-box {
+    background: #12122a;
+    border-radius: 10px;
+    padding: 14px;
+    border: 1px solid #2a2a4a;
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 13px;
+  }
+
+  .info-row .label { color: #888; }
+
+  .info-row .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: #e0e0e0;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 8px;
+  }
+
+  button {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #00d4ff, #0088cc);
+    color: #fff;
+  }
+
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,212,255,0.3); }
+
+  .btn-secondary {
+    background: #2a2a4a;
+    color: #ccc;
+  }
+
+  .btn-secondary:hover { background: #3a3a5a; }
+
+  .func-selector {
+    display: flex;
+    gap: 6px;
+  }
+
+  .func-btn {
+    flex: 1;
+    padding: 8px;
+    font-size: 12px;
+    border-radius: 6px;
+    background: #2a2a4a;
+    color: #aaa;
+    border: 1px solid transparent;
+  }
+
+  .func-btn.active {
+    background: #1a3a5a;
+    color: #00d4ff;
+    border-color: #00d4ff;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .status-converged { background: #0a3a2a; color: #00ff88; }
+  .status-diverged { background: #3a1a1a; color: #ff4444; }
+  .status-running { background: #1a2a3a; color: #00d4ff; }
+  .status-ready { background: #2a2a2a; color: #888; }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+</style>
+</head>
+<body>
+
+<h1>⬇ Gradient Descent Visualizer</h1>
+<p class="subtitle">Step Size(학습률)를 드래그하여 경사하강법의 동작을 관찰하세요</p>
+
+<div class="main-container">
+  <div>
+    <div class="canvas-wrapper">
+      <canvas id="canvas" width="600" height="420"></canvas>
+    </div>
+    <div class="legend" style="margin-top: 12px; justify-content: center;">
+      <div class="legend-item"><div class="legend-dot" style="background:#00d4ff;"></div>현재 위치</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff6b6b;"></div>경로 (trajectory)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#00ff88;"></div>최솟값 (minimum)</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Learning Rate (α)</label>
+      <div class="value-display" id="lrDisplay">0.10</div>
+      <input type="range" id="lrSlider" min="0.01" max="1.5" step="0.01" value="0.10">
+      <div style="display:flex; justify-content:space-between; font-size:11px; color:#666;">
+        <span>0.01 (느림)</span>
+        <span>1.50 (빠름)</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label>시작 위치 (x₀)</label>
+      <div class="value-display" id="x0Display" style="color:#ff9f43;">4.00</div>
+      <input type="range" id="x0Slider" min="-5" max="5" step="0.1" value="4">
+    </div>
+
+    <div class="control-group">
+      <label>애니메이션 속도</label>
+      <div class="value-display" id="speedDisplay" style="color:#a78bfa;">0.4초/step</div>
+      <input type="range" id="speedSlider" min="50" max="1500" step="50" value="400">
+      <div style="display:flex; justify-content:space-between; font-size:11px; color:#666;">
+        <span>빠름 (0.05s)</span>
+        <span>느림 (1.5s)</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label>함수 선택</label>
+      <div class="func-selector">
+        <button class="func-btn active" data-fn="quadratic">x²</button>
+        <button class="func-btn" data-fn="quartic">x⁴-3x²</button>
+        <button class="func-btn" data-fn="sinusoidal">sin + x²</button>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <div class="info-row">
+        <span class="label">상태</span>
+        <span class="val"><span class="status-badge status-ready" id="statusBadge">READY</span></span>
+      </div>
+      <div class="info-row">
+        <span class="label">반복 횟수</span>
+        <span class="val" id="iterDisplay">0</span>
+      </div>
+      <div class="info-row">
+        <span class="label">현재 x</span>
+        <span class="val" id="curXDisplay">—</span>
+      </div>
+      <div class="info-row">
+        <span class="label">현재 f(x)</span>
+        <span class="val" id="curFDisplay">—</span>
+      </div>
+      <div class="info-row">
+        <span class="label">기울기 f'(x)</span>
+        <span class="val" id="curGDisplay">—</span>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-primary" id="btnRun">▶ 실행</button>
+      <button class="btn-secondary" id="btnStep">1 Step</button>
+      <button class="btn-secondary" id="btnReset">↺</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const PAD = 50;
+
+// State
+let lr = 0.10, x0 = 4.0, currentFn = 'quadratic';
+let animSpeed = 400; // ms per step (higher = slower)
+let path = [], animating = false, animId = null;
+
+// Functions
+const fns = {
+  quadratic: {
+    f: x => x * x,
+    df: x => 2 * x,
+    xRange: [-5.5, 5.5],
+    yRange: [-2, 30],
+    minX: 0
+  },
+  quartic: {
+    f: x => x*x*x*x - 3*x*x + 2,
+    df: x => 4*x*x*x - 6*x,
+    xRange: [-2.5, 2.5],
+    yRange: [-2, 8],
+    minX: Math.sqrt(1.5)
+  },
+  sinusoidal: {
+    f: x => Math.sin(2*x) + 0.15*x*x + 1,
+    df: x => 2*Math.cos(2*x) + 0.3*x,
+    xRange: [-6, 6],
+    yRange: [-1, 7],
+    minX: -1.2 // approximate
+  }
+};
+
+function getFn() { return fns[currentFn]; }
+
+function toCanvas(x, y) {
+  const fn = getFn();
+  const px = PAD + (x - fn.xRange[0]) / (fn.xRange[1] - fn.xRange[0]) * (W - 2*PAD);
+  const py = H - PAD - (y - fn.yRange[0]) / (fn.yRange[1] - fn.yRange[0]) * (H - 2*PAD);
+  return [px, py];
+}
+
+function drawGrid() {
+  const fn = getFn();
+  ctx.strokeStyle = '#1f1f3a';
+  ctx.lineWidth = 1;
+
+  // Vertical grid
+  for (let x = Math.ceil(fn.xRange[0]); x <= fn.xRange[1]; x++) {
+    const [px] = toCanvas(x, 0);
+    ctx.beginPath(); ctx.moveTo(px, PAD); ctx.lineTo(px, H - PAD); ctx.stroke();
+  }
+  // Horizontal grid
+  const yStep = (fn.yRange[1] - fn.yRange[0]) > 15 ? 5 : 1;
+  for (let y = Math.ceil(fn.yRange[0]/yStep)*yStep; y <= fn.yRange[1]; y += yStep) {
+    const [, py] = toCanvas(0, y);
+    ctx.beginPath(); ctx.moveTo(PAD, py); ctx.lineTo(W - PAD, py); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = '#3a3a5a';
+  ctx.lineWidth = 1.5;
+  const [ox, oy] = toCanvas(0, 0);
+  if (ox >= PAD && ox <= W - PAD) {
+    ctx.beginPath(); ctx.moveTo(ox, PAD); ctx.lineTo(ox, H - PAD); ctx.stroke();
+  }
+  if (oy >= PAD && oy <= H - PAD) {
+    ctx.beginPath(); ctx.moveTo(PAD, oy); ctx.lineTo(W - PAD, oy); ctx.stroke();
+  }
+
+  // Labels
+  ctx.fillStyle = '#555';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'center';
+  for (let x = Math.ceil(fn.xRange[0]); x <= fn.xRange[1]; x++) {
+    const [px] = toCanvas(x, 0);
+    ctx.fillText(x, px, H - PAD + 16);
+  }
+  ctx.textAlign = 'right';
+  for (let y = Math.ceil(fn.yRange[0]/yStep)*yStep; y <= fn.yRange[1]; y += yStep) {
+    const [, py] = toCanvas(0, y);
+    ctx.fillText(y, PAD - 8, py + 4);
+  }
+}
+
+function drawFunction() {
+  const fn = getFn();
+  const grad = ctx.createLinearGradient(PAD, 0, W - PAD, 0);
+  grad.addColorStop(0, '#4a3aaa');
+  grad.addColorStop(0.5, '#6a5aee');
+  grad.addColorStop(1, '#4a3aaa');
+
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+
+  const steps = 300;
+  for (let i = 0; i <= steps; i++) {
+    const x = fn.xRange[0] + (fn.xRange[1] - fn.xRange[0]) * i / steps;
+    const y = fn.f(x);
+    const [px, py] = toCanvas(x, y);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+}
+
+function drawMinimum() {
+  const fn = getFn();
+  const mx = fn.minX;
+  const my = fn.f(mx);
+  const [px, py] = toCanvas(mx, my);
+
+  ctx.beginPath();
+  ctx.arc(px, py, 8, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,255,136,0.15)';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(px, py, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#00ff88';
+  ctx.fill();
+}
+
+function drawPath() {
+  if (path.length < 2) return;
+  const fn = getFn();
+
+  // Trail with decreasing opacity
+  for (let i = 1; i < path.length; i++) {
+    const alpha = 0.2 + 0.8 * (i / path.length);
+    const [x1, y1] = toCanvas(path[i-1], fn.f(path[i-1]));
+    const [x2, y2] = toCanvas(path[i], fn.f(path[i]));
+
+    ctx.strokeStyle = `rgba(255,107,107,${alpha})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    // Arrow at midpoint
+    if (i === path.length - 1) {
+      ctx.beginPath();
+      ctx.arc(x2, y2, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#ff6b6b';
+      ctx.fill();
+    }
+  }
+}
+
+function drawCurrentPoint() {
+  if (path.length === 0) return;
+  const fn = getFn();
+  const x = path[path.length - 1];
+  const y = fn.f(x);
+  const [px, py] = toCanvas(x, y);
+
+  // Glow
+  const glow = ctx.createRadialGradient(px, py, 0, px, py, 20);
+  glow.addColorStop(0, 'rgba(0,212,255,0.4)');
+  glow.addColorStop(1, 'rgba(0,212,255,0)');
+  ctx.beginPath();
+  ctx.arc(px, py, 20, 0, Math.PI * 2);
+  ctx.fillStyle = glow;
+  ctx.fill();
+
+  // Point
+  ctx.beginPath();
+  ctx.arc(px, py, 7, 0, Math.PI * 2);
+  ctx.fillStyle = '#00d4ff';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Tangent line
+  const slope = fn.df(x);
+  const dx = 0.8;
+  const [tx1, ty1] = toCanvas(x - dx, y - slope * dx);
+  const [tx2, ty2] = toCanvas(x + dx, y + slope * dx);
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = 'rgba(255,159,67,0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(tx1, ty1);
+  ctx.lineTo(tx2, ty2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawTitle() {
+  ctx.fillStyle = '#666';
+  ctx.font = '12px Noto Sans KR';
+  ctx.textAlign = 'center';
+  const names = { quadratic: 'f(x) = x²', quartic: 'f(x) = x⁴ − 3x² + 2', sinusoidal: 'f(x) = sin(2x) + 0.15x² + 1' };
+  ctx.fillText(names[currentFn], W / 2, 24);
+}
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0f0f1a';
+  ctx.fillRect(0, 0, W, H);
+
+  drawGrid();
+  drawFunction();
+  drawMinimum();
+  drawPath();
+  drawCurrentPoint();
+  drawTitle();
+}
+
+function updateInfo() {
+  const fn = getFn();
+  document.getElementById('lrDisplay').textContent = lr.toFixed(2);
+  document.getElementById('x0Display').textContent = x0.toFixed(2);
+
+  if (path.length > 0) {
+    const x = path[path.length - 1];
+    document.getElementById('iterDisplay').textContent = path.length - 1;
+    document.getElementById('curXDisplay').textContent = x.toFixed(4);
+    document.getElementById('curFDisplay').textContent = fn.f(x).toFixed(4);
+    document.getElementById('curGDisplay').textContent = fn.df(x).toFixed(4);
+  } else {
+    document.getElementById('iterDisplay').textContent = '0';
+    document.getElementById('curXDisplay').textContent = '—';
+    document.getElementById('curFDisplay').textContent = '—';
+    document.getElementById('curGDisplay').textContent = '—';
+  }
+}
+
+function setStatus(status) {
+  const badge = document.getElementById('statusBadge');
+  badge.className = 'status-badge status-' + status;
+  const labels = { ready: 'READY', running: 'RUNNING', converged: 'CONVERGED', diverged: 'DIVERGED' };
+  badge.textContent = labels[status];
+}
+
+function doStep() {
+  if (path.length === 0) path = [x0];
+
+  const fn = getFn();
+  const x = path[path.length - 1];
+  const grad = fn.df(x);
+  const newX = x - lr * grad;
+
+  // Check divergence
+  if (Math.abs(newX) > 100 || !isFinite(newX)) {
+    setStatus('diverged');
+    return false;
+  }
+
+  path.push(newX);
+
+  // Check convergence
+  if (Math.abs(grad) < 0.001) {
+    setStatus('converged');
+    return false;
+  }
+
+  return true;
+}
+
+function reset() {
+  stopAnim();
+  path = [];
+  setStatus('ready');
+  updateInfo();
+  render();
+}
+
+function stopAnim() {
+  animating = false;
+  if (animId) { clearTimeout(animId); animId = null; }
+}
+
+function runAnimation() {
+  if (!animating) return;
+  const cont = doStep();
+  updateInfo();
+  render();
+  if (cont && path.length < 200) {
+    animId = setTimeout(runAnimation, animSpeed);
+  } else {
+    animating = false;
+  }
+}
+
+// Event listeners
+document.getElementById('lrSlider').addEventListener('input', e => {
+  lr = parseFloat(e.target.value);
+  reset();
+});
+
+document.getElementById('x0Slider').addEventListener('input', e => {
+  x0 = parseFloat(e.target.value);
+  reset();
+});
+
+document.getElementById('speedSlider').addEventListener('input', e => {
+  animSpeed = parseInt(e.target.value);
+  document.getElementById('speedDisplay').textContent = (animSpeed / 1000).toFixed(2) + '초/step';
+});
+
+document.querySelectorAll('.func-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.func-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFn = btn.dataset.fn;
+    reset();
+  });
+});
+
+document.getElementById('btnRun').addEventListener('click', () => {
+  if (animating) {
+    stopAnim();
+    setStatus(path.length > 0 ? 'ready' : 'ready');
+    document.getElementById('btnRun').textContent = '▶ 실행';
+  } else {
+    if (path.length === 0) path = [x0];
+    animating = true;
+    setStatus('running');
+    document.getElementById('btnRun').textContent = '⏸ 일시정지';
+    runAnimation();
+  }
+});
+
+document.getElementById('btnStep').addEventListener('click', () => {
+  stopAnim();
+  document.getElementById('btnRun').textContent = '▶ 실행';
+  if (path.length === 0) path = [x0];
+  doStep();
+  updateInfo();
+  render();
+});
+
+document.getElementById('btnReset').addEventListener('click', reset);
+
+// Init
+reset();
+</script>
+</body>
+</html>
